@@ -8,20 +8,14 @@ package org.h2.value;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
-
-import com.vividsolutions.jts.geom.CoordinateSequence;
-import com.vividsolutions.jts.geom.CoordinateSequenceFilter;
-import com.vividsolutions.jts.geom.PrecisionModel;
+import java.util.Iterator;
+import java.util.ServiceLoader;
+import org.h2.api.GeometryParseException;
+import org.h2.api.IEnvelope;
+import org.h2.api.IGeometry;
+import org.h2.api.IGeometryFactory;
 import org.h2.message.DbException;
 import org.h2.util.StringUtils;
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.io.ParseException;
-import com.vividsolutions.jts.io.WKBReader;
-import com.vividsolutions.jts.io.WKBWriter;
-import com.vividsolutions.jts.io.WKTReader;
-import com.vividsolutions.jts.io.WKTWriter;
 
 /**
  * Implementation of the GEOMETRY data type.
@@ -33,22 +27,34 @@ import com.vividsolutions.jts.io.WKTWriter;
 public class ValueGeometry extends Value {
 
     /**
-     * As conversion from/to WKB cost a significant amount of CPU cycles, WKB
-     * are kept in ValueGeometry instance.
+     * Factory which provides a couple of methods to create a {@link IGeometry}
+     * instance.
+     */
+    private static final IGeometryFactory GEOMETRY_FACTORY;
+
+    static {
+        ServiceLoader<IGeometryFactory> geometryFactories = ServiceLoader.load(IGeometryFactory.class);
+        Iterator<IGeometryFactory> geometryFactoryIterator = geometryFactories.iterator();
+        GEOMETRY_FACTORY = geometryFactoryIterator.hasNext() ? geometryFactories.iterator().next() : null;
+    }
+    
+    /**
+     * As conversion from/to byte array cost a significant amount of CPU cycles,
+     * byte array are kept in ValueGeometry instance.
      *
-     * We always calculate the WKB, because not all WKT values can be
-     * represented in WKB, but since we persist it in WKB format, it has to be
-     * valid in WKB
+     * We always calculate the byte array, because not all geometry string 
+     * representation values can be represented in byte array, but since we 
+     * persist it in binary format, it has to be valid in byte array
      */
     private final byte[] bytes;
 
     private final int hashCode;
 
     /**
-     * The value. Converted from WKB only on request as conversion from/to WKB
-     * cost a significant amount of CPU cycles.
+     * The value. Converted from byte array only on request as conversion 
+     * from/to byte array cost a significant amount of CPU cycles.
      */
-    private Geometry geometry;
+    private IGeometry geometry;
 
     /**
      * Create a new geometry objects.
@@ -56,7 +62,7 @@ public class ValueGeometry extends Value {
      * @param bytes the bytes (always known)
      * @param geometry the geometry object (may be null)
      */
-    private ValueGeometry(byte[] bytes, Geometry geometry) {
+    private ValueGeometry(byte[] bytes, IGeometry geometry) {
         this.bytes = bytes;
         this.geometry = geometry;
         this.hashCode = Arrays.hashCode(bytes);
@@ -65,43 +71,25 @@ public class ValueGeometry extends Value {
     /**
      * Get or create a geometry value for the given geometry.
      *
-     * @param o the geometry object (of type
-     *            com.vividsolutions.jts.geom.Geometry)
+     * @param g the geometry object
      * @return the value
      */
-    public static ValueGeometry getFromGeometry(Object o) {
-        return get((Geometry) o);
-    }
-
-    private static ValueGeometry get(Geometry g) {
-        byte[] bytes = convertToWKB(g);
+    public static ValueGeometry get(IGeometry g) {
+        byte[] bytes = g.getBytes();
         return (ValueGeometry) Value.cache(new ValueGeometry(bytes, g));
-    }
-
-    private static byte[] convertToWKB(Geometry g) {
-        boolean includeSRID = g.getSRID() != 0;
-        int dimensionCount = getDimensionCount(g);
-        WKBWriter writer = new WKBWriter(dimensionCount, includeSRID);
-        return writer.write(g);
-    }
-
-    private static int getDimensionCount(Geometry geometry) {
-        ZVisitor finder = new ZVisitor();
-        geometry.apply(finder);
-        return finder.isFoundZ() ? 3 : 2;
     }
 
     /**
      * Get or create a geometry value for the given geometry.
      *
-     * @param s the WKT representation of the geometry
+     * @param s the string representation of the geometry
      * @return the value
      */
     public static ValueGeometry get(String s) {
         try {
-            Geometry g = new WKTReader().read(s);
+            IGeometry g = GEOMETRY_FACTORY.toGeometry(s);
             return get(g);
-        } catch (ParseException ex) {
+        } catch (GeometryParseException ex) {
             throw DbException.convert(ex);
         }
     }
@@ -109,16 +97,15 @@ public class ValueGeometry extends Value {
     /**
      * Get or create a geometry value for the given geometry.
      *
-     * @param s the WKT representation of the geometry
+     * @param s the string representation of the geometry
      * @param srid the srid of the object
      * @return the value
      */
     public static ValueGeometry get(String s, int srid) {
         try {
-            GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), srid);
-            Geometry g = new WKTReader(geometryFactory).read(s);
+            IGeometry g = GEOMETRY_FACTORY.toGeometry(s, srid);
             return get(g);
-        } catch (ParseException ex) {
+        } catch (GeometryParseException ex) {
             throw DbException.convert(ex);
         }
     }
@@ -139,15 +126,15 @@ public class ValueGeometry extends Value {
      *
      * @return a copy of the geometry object
      */
-    public Geometry getGeometry() {
-        return (Geometry) getGeometryNoCopy().clone();
+    public IGeometry getGeometry() {
+        return getGeometryNoCopy().clone();
     }
 
-    public Geometry getGeometryNoCopy() {
+    public IGeometry getGeometryNoCopy() {
         if (geometry == null) {
             try {
-                geometry = new WKBReader().read(bytes);
-            } catch (ParseException ex) {
+                geometry = GEOMETRY_FACTORY.toGeometry(bytes);
+            } catch (GeometryParseException ex) {
                 throw DbException.convert(ex);
             }
         }
@@ -163,8 +150,8 @@ public class ValueGeometry extends Value {
      */
     public boolean intersectsBoundingBox(ValueGeometry r) {
         // the Geometry object caches the envelope
-        return getGeometryNoCopy().getEnvelopeInternal().intersects(
-                r.getGeometryNoCopy().getEnvelopeInternal());
+        return getGeometryNoCopy().getEnvelope().intersects(
+                r.getGeometryNoCopy().getEnvelope());
     }
 
     /**
@@ -174,10 +161,9 @@ public class ValueGeometry extends Value {
      * @return the union of this geometry envelope and another geometry envelope
      */
     public Value getEnvelopeUnion(ValueGeometry r) {
-        GeometryFactory gf = new GeometryFactory();
-        Envelope mergedEnvelope = new Envelope(getGeometryNoCopy().getEnvelopeInternal());
-        mergedEnvelope.expandToInclude(r.getGeometryNoCopy().getEnvelopeInternal());
-        return get(gf.toGeometry(mergedEnvelope));
+        IEnvelope mergedEnvelope = getGeometryNoCopy().getEnvelope().getUnion(
+                r.getGeometryNoCopy().getEnvelope());
+        return get(GEOMETRY_FACTORY.toGeometry(mergedEnvelope));
     }
 
     @Override
@@ -195,13 +181,13 @@ public class ValueGeometry extends Value {
 
     @Override
     protected int compareSecure(Value v, CompareMode mode) {
-        Geometry g = ((ValueGeometry) v).getGeometryNoCopy();
+        IGeometry g = ((ValueGeometry) v).getGeometryNoCopy();
         return getGeometryNoCopy().compareTo(g);
     }
 
     @Override
     public String getString() {
-        return getWKT();
+        return getGeometryNoCopy().getString();
     }
 
     @Override
@@ -221,12 +207,12 @@ public class ValueGeometry extends Value {
 
     @Override
     public byte[] getBytes() {
-        return getWKB();
+        return bytes;
     }
 
     @Override
     public byte[] getBytesNoCopy() {
-        return getWKB();
+        return bytes;
     }
 
     @Override
@@ -237,38 +223,18 @@ public class ValueGeometry extends Value {
 
     @Override
     public int getDisplaySize() {
-        return getWKT().length();
+        return getGeometryNoCopy().getString().length();
     }
 
     @Override
     public int getMemory() {
-        return getWKB().length * 20 + 24;
+        return getBytes().length * 20 + 24;
     }
 
     @Override
     public boolean equals(Object other) {
-        // The JTS library only does half-way support for 3D coordinates, so
-        // their equals method only checks the first two coordinates.
         return other instanceof ValueGeometry &&
-                Arrays.equals(getWKB(), ((ValueGeometry) other).getWKB());
-    }
-
-    /**
-     * Get the value in Well-Known-Text format.
-     *
-     * @return the well-known-text
-     */
-    public String getWKT() {
-        return new WKTWriter(3).write(getGeometryNoCopy());
-    }
-
-    /**
-     * Get the value in Well-Known-Binary format.
-     *
-     * @return the well-known-binary
-     */
-    public byte[] getWKB() {
-        return bytes;
+                Arrays.equals(getBytes(), ((ValueGeometry) other).getBytes());
     }
 
     @Override
@@ -278,34 +244,13 @@ public class ValueGeometry extends Value {
         }
         return super.convertTo(targetType);
     }
-
+    
     /**
-     * A visitor that checks if there is a Z coordinate.
+     * Returns <code>true</code> if a IGeometryFactory is available and initialized.
+     * @return
      */
-    static class ZVisitor implements CoordinateSequenceFilter {
-        boolean foundZ;
-
-        public boolean isFoundZ() {
-            return foundZ;
-        }
-
-        @Override
-        public void filter(CoordinateSequence coordinateSequence, int i) {
-            if (!Double.isNaN(coordinateSequence.getOrdinate(i, 2))) {
-                foundZ = true;
-            }
-        }
-
-        @Override
-        public boolean isDone() {
-            return foundZ;
-        }
-
-        @Override
-        public boolean isGeometryChanged() {
-            return false;
-        }
-
+    public static boolean isInitialized()
+    {
+    	return GEOMETRY_FACTORY!=null;
     }
-
 }

@@ -7,8 +7,9 @@ package org.h2.mvstore.db;
 
 import java.util.Iterator;
 import java.util.List;
-
 import org.h2.api.ErrorCode;
+import org.h2.api.IEnvelope;
+import org.h2.api.IGeometry;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.index.BaseIndex;
@@ -32,9 +33,6 @@ import org.h2.table.TableFilter;
 import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
 import org.h2.value.ValueLong;
-
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Geometry;
 
 /**
  * This is an index based on a MVRTreeMap.
@@ -166,8 +164,8 @@ public class MVSpatialIndex extends BaseIndex implements SpatialIndex, MVIndex {
             return null;
         }
         Value v = r.getValue(columnIds[0]);
-        Geometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
-        Envelope env = g.getEnvelopeInternal();
+        IGeometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
+        IEnvelope env = g.getEnvelope();
         return new SpatialKey(r.getKey(),
                 (float) env.getMinX(), (float) env.getMaxX(),
                 (float) env.getMinY(), (float) env.getMaxY());
@@ -221,8 +219,8 @@ public class MVSpatialIndex extends BaseIndex implements SpatialIndex, MVIndex {
 
     private SpatialKey getEnvelope(SearchRow row) {
         Value v = row.getValue(columnIds[0]);
-        Geometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
-        Envelope env = g.getEnvelopeInternal();
+        IGeometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
+        IEnvelope env = g.getEnvelope();
         return new SpatialKey(row.getKey(),
                 (float) env.getMinX(), (float) env.getMaxX(),
                 (float) env.getMinY(), (float) env.getMaxY());
