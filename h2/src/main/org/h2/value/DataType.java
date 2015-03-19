@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
 import org.h2.api.ErrorCode;
-import org.h2.api.IGeometry;
 import org.h2.engine.Constants;
 import org.h2.engine.SessionInterface;
 import org.h2.engine.SysProperties;
@@ -637,11 +636,11 @@ public class DataType {
             }
             case Value.GEOMETRY: {
                 Object x = rs.getObject(columnIndex);
-                if (x == null || !(x instanceof IGeometry)) {
+                if (x == null || !Value.getGeometryFactory().isGeometryTypeSupported(x)) {
                     return ValueNull.INSTANCE;
                 }
 
-                return ValueGeometry.get((IGeometry) x);
+                return Value.getGeometryFactory().get(x);
             }
             default:
                 throw DbException.throwInternalError("type="+type);
@@ -721,7 +720,7 @@ public class DataType {
         case Value.RESULT_SET:
             return ResultSet.class.getName();
         case Value.GEOMETRY:
-            return IGeometry.class.getName();
+            return Value.getGeometryFactory().getGeometryType().getName();
         default:
             throw DbException.throwInternalError("type="+type);
         }
@@ -919,7 +918,7 @@ public class DataType {
         } else if (Object[].class.isAssignableFrom(x)) {
             // this includes String[] and so on
             return Value.ARRAY;
-        } else if (IGeometry.class.isAssignableFrom(x)) {
+        } else if (Value.getGeometryFactory().getGeometryType().isAssignableFrom(x)) {
             return Value.GEOMETRY;
         } else {
             return Value.JAVA_OBJECT;
@@ -1015,8 +1014,8 @@ public class DataType {
             return ValueArray.get(x.getClass().getComponentType(), v);
         } else if (x instanceof Character) {
             return ValueStringFixed.get(((Character) x).toString());
-        } else if (x instanceof IGeometry) {
-            return ValueGeometry.get((IGeometry) x);
+        } else if (Value.getGeometryFactory().isGeometryTypeSupported(x)) {
+            return Value.getGeometryFactory().get(x);
         } else {
             return ValueJavaObject.getNoCopy(x, null, session.getDataHandler());
         }

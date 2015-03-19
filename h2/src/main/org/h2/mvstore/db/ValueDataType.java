@@ -576,7 +576,7 @@ public class ValueDataType implements DataType {
             int len = readVarInt(buff);
             byte[] b = DataUtils.newBytes(len);
             buff.get(b, 0, len);
-            return ValueGeometry.get(b);
+            return Value.getGeometryFactory().get(b);
         }
         case SPATIAL_KEY_2D:
             return getSpatialDataType().read(buff);

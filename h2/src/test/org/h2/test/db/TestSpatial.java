@@ -18,15 +18,12 @@ import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.util.AffineTransformation;
 
 import org.h2.api.Aggregate;
-import org.h2.api.IEnvelope;
-import org.h2.api.IGeometry;
-import org.h2.jts.H2Envelope;
-import org.h2.jts.H2Geometry;
-import org.h2.jts.H2GeometryFactory;
+import org.h2.api.IValueGeometryFactory;
 import org.h2.test.TestBase;
 import org.h2.tools.SimpleResultSet;
 import org.h2.tools.SimpleRowSource;
 import org.h2.value.DataType;
+import org.h2.value.H2ValueGeometry;
 import org.h2.value.Value;
 
 import com.vividsolutions.jts.geom.Coordinate;
@@ -66,7 +63,7 @@ public class TestSpatial extends TestBase {
         if (config.memory && config.mvcc) {
             return;
         }
-        if (ValueGeometry.isInitialized()) {
+        if (Value.isGeometryFactoryInitialized()) {
             deleteDb("spatial");
             url = "spatial";
             testSpatial();
@@ -100,11 +97,12 @@ public class TestSpatial extends TestBase {
     }
 
     private void testHashCode() {
-        ValueGeometry geomA = ValueGeometry
+    	
+        ValueGeometry<?> geomA = Value.getGeometryFactory()
                 .get("POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 6,  67 13 6))");
-        ValueGeometry geomB = ValueGeometry
+        ValueGeometry<?> geomB = Value.getGeometryFactory()
                 .get("POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 6,  67 13 6))");
-        ValueGeometry geomC = ValueGeometry
+        ValueGeometry<?> geomC = Value.getGeometryFactory()
                 .get("POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 5,  67 13 6))");
         assertEquals(geomA.hashCode(), geomB.hashCode());
         assertFalse(geomA.hashCode() == geomC.hashCode());
@@ -129,8 +127,7 @@ public class TestSpatial extends TestBase {
                 new Coordinate(1, 2),
                 new Coordinate(2, 2),
                 new Coordinate(1, 1) });
-        
-        assertTrue(new H2Geometry(polygon).equals(rs.getObject(2)));
+        assertTrue(polygon.equals(rs.getObject(2)));
 
         rs = stat.executeQuery("select * from test where polygon = " +
                 "'POLYGON ((1 1, 1 2, 2 2, 1 1))'");
@@ -576,12 +573,12 @@ public class TestSpatial extends TestBase {
      * @param srid the projection id
      * @return Geometry object
      */
-    public static IGeometry geomFromText(String text, int srid) throws SQLException {
+    public static Geometry geomFromText(String text, int srid) throws SQLException {
         WKTReader wktReader = new WKTReader();
         try {
             Geometry geom = wktReader.read(text);
             geom.setSRID(srid);
-            return new H2Geometry(geom);
+            return geom;
         } catch (ParseException ex) {
             throw new SQLException(ex);
         }
@@ -589,27 +586,23 @@ public class TestSpatial extends TestBase {
 
     private void testGeometryDataType() {
         GeometryFactory geometryFactory = new GeometryFactory();
-        H2Geometry geometry = new H2Geometry(geometryFactory.createPoint(new Coordinate(0, 0)));
+        Geometry geometry = geometryFactory.createPoint(new Coordinate(0, 0));
         assertEquals(Value.GEOMETRY, DataType.getTypeFromClass(geometry.getClass()));
     }
 
     /**
      * Test serialization of Z and SRID values.
-     * @throws SQLException 
      */
-    private void testWKB() throws SQLException {
-        ValueGeometry geom3d = ValueGeometry.get(
+    private void testWKB() {
+        H2ValueGeometry geom3d = getValueGeometryFactory().get(
                 "POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 6,  67 13 6))", 27572);
-        ValueGeometry copy = ValueGeometry.get(geom3d.getBytes());
-        
-        Geometry geometry = copy.getGeometry().unwrap(Geometry.class);
-        
-        assertEquals(6, geometry.getCoordinates()[0].z);
-        assertEquals(5, geometry.getCoordinates()[1].z);
-        assertEquals(4, geometry.getCoordinates()[2].z);
+        H2ValueGeometry copy = getValueGeometryFactory().get(geom3d.getBytes());
+        assertEquals(6, copy.getGeometry().getCoordinates()[0].z);
+        assertEquals(5, copy.getGeometry().getCoordinates()[1].z);
+        assertEquals(4, copy.getGeometry().getCoordinates()[2].z);
         // Test SRID
-        copy = ValueGeometry.get(geom3d.getBytes());
-        assertEquals(27572, geometry.getSRID());
+        copy = getValueGeometryFactory().get(geom3d.getBytes());
+        assertEquals(27572, copy.getGeometry().getSRID());
     }
 
     /**
@@ -645,26 +638,25 @@ public class TestSpatial extends TestBase {
      */
     private void testEquals() {
         // 3d equality test
-        ValueGeometry geom3d = ValueGeometry.get(
+        ValueGeometry<?> geom3d = Value.getGeometryFactory().get(
                 "POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 6,  67 13 6))");
-        ValueGeometry geom2d = ValueGeometry.get(
+        ValueGeometry<?> geom2d = Value.getGeometryFactory().get(
                 "POLYGON ((67 13, 67 18, 59 18, 59 13,  67 13))");
         assertFalse(geom3d.equals(geom2d));
         // SRID equality test
         GeometryFactory geometryFactory = new GeometryFactory();
         Geometry geometry = geometryFactory.createPoint(new Coordinate(0, 0));
         geometry.setSRID(27572);
-        
-        ValueGeometry valueGeometry =
-                ValueGeometry.get(new H2Geometry(geometry));
+        ValueGeometry<?> valueGeometry =
+        		Value.getGeometryFactory().get(geometry);
         Geometry geometry2 = geometryFactory.createPoint(new Coordinate(0, 0));
         geometry2.setSRID(5326);
-        ValueGeometry valueGeometry2 =
-                ValueGeometry.get(new H2Geometry(geometry2));
+        ValueGeometry<?> valueGeometry2 =
+        		Value.getGeometryFactory().get(geometry2);
         assertFalse(valueGeometry.equals(valueGeometry2));
         // Check illegal geometry (no WKB representation)
         try {
-            ValueGeometry.get("POINT EMPTY");
+        	Value.getGeometryFactory().get("POINT EMPTY");
             fail("expected this to throw IllegalArgumentException");
         } catch (IllegalArgumentException ex) {
             // expected
@@ -723,9 +715,9 @@ public class TestSpatial extends TestBase {
             assertEquals("geometry", rs.getMetaData().
                     getColumnTypeName(1).toLowerCase());
             assertTrue(rs.next());
-            assertTrue(rs.getObject(1) instanceof IGeometry);
+            assertTrue(rs.getObject(1) instanceof Geometry);
             assertTrue(new Envelope(1, 10, 1, 5).equals(
-                    ((IGeometry) rs.getObject(1)).getEnvelope().unwrap(Envelope.class)));
+                    ((Geometry) rs.getObject(1)).getEnvelopeInternal()));
             assertFalse(rs.next());
         } finally {
             conn.close();
@@ -756,18 +748,18 @@ public class TestSpatial extends TestBase {
 
         @Override
         public void add(Object value) throws SQLException {
-            if (value instanceof IGeometry) {
+            if (value instanceof Geometry) {
                 if (tableEnvelope == null) {
-                    tableEnvelope = ((IGeometry) value).getEnvelope().unwrap(Envelope.class);
+                    tableEnvelope = ((Geometry) value).getEnvelopeInternal();
                 } else {
-                    tableEnvelope.expandToInclude(((IGeometry) value).getEnvelope().unwrap(Envelope.class));
+                    tableEnvelope.expandToInclude(((Geometry) value).getEnvelopeInternal());
                 }
             }
         }
 
         @Override
         public Object getResult() throws SQLException {
-            return new H2Geometry(new GeometryFactory().toGeometry(tableEnvelope));
+            return new GeometryFactory().toGeometry(tableEnvelope);
         }
     }
 
@@ -809,15 +801,14 @@ public class TestSpatial extends TestBase {
      * Check ValueGeometry conversion into SQL script
      */
     private void testValueGeometryScript() throws SQLException {
-        ValueGeometry valueGeometry = ValueGeometry.get("POINT(1 1 5)");
+        ValueGeometry<?> valueGeometry = Value.getGeometryFactory().get("POINT(1 1 5)");
         Connection conn = getConnection(url);
         try {
             ResultSet rs = conn.createStatement().executeQuery(
                     "SELECT " + valueGeometry.getSQL());
             assertTrue(rs.next());
             Object obj = rs.getObject(1);
-            assertTrue(obj instanceof IGeometry);
-            ValueGeometry g = ValueGeometry.get((IGeometry) obj);
+            ValueGeometry<?> g = Value.getGeometryFactory().get(obj);
             assertTrue("got: " + g + " exp: " + valueGeometry, valueGeometry.equals(g));
         } finally {
             conn.close();
@@ -835,15 +826,15 @@ public class TestSpatial extends TestBase {
                     "SELECT 'POINT(1 1)'::geometry");
             assertTrue(rs.next());
             // Mutate the geometry
-            ((IGeometry) rs.getObject(1)).unwrap(Geometry.class).apply(new AffineTransformation(1, 0,
+            ((Geometry) rs.getObject(1)).apply(new AffineTransformation(1, 0,
                     1, 1, 0, 1));
             rs.close();
             rs = conn.createStatement().executeQuery(
                     "SELECT 'POINT(1 1)'::geometry");
             assertTrue(rs.next());
             // Check if the geometry is the one requested
-            assertEquals(1, ((IGeometry) rs.getObject(1)).unwrap(Point.class).getX());
-            assertEquals(1, ((IGeometry) rs.getObject(1)).unwrap(Point.class).getY());
+            assertEquals(1, ((Point) rs.getObject(1)).getX());
+            assertEquals(1, ((Point) rs.getObject(1)).getY());
             rs.close();
         } finally {
             conn.close();
@@ -925,4 +916,10 @@ public class TestSpatial extends TestBase {
         deleteDb("spatial");
     }
 
+    @SuppressWarnings("unchecked")
+	private static IValueGeometryFactory<H2ValueGeometry, Geometry> getValueGeometryFactory()
+    {
+    	return (IValueGeometryFactory<H2ValueGeometry, Geometry>)Value.getGeometryFactory();
+    }
+    
 }

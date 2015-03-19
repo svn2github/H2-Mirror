@@ -8,8 +8,6 @@ package org.h2.mvstore.db;
 import java.util.Iterator;
 import java.util.List;
 import org.h2.api.ErrorCode;
-import org.h2.api.IEnvelope;
-import org.h2.api.IGeometry;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.index.BaseIndex;
@@ -120,7 +118,7 @@ public class MVSpatialIndex extends BaseIndex implements SpatialIndex, MVIndex {
     @Override
     public void add(Session session, Row row) {
         TransactionMap<SpatialKey, Value> map = getMap(session);
-        SpatialKey key = getKey(row);
+        SpatialKey key = getEnvelope(row);
         if (indexType.isUnique()) {
             // this will detect committed entries only
             RTreeCursor cursor = spatialMap.findContainedKeys(key);
@@ -159,21 +157,17 @@ public class MVSpatialIndex extends BaseIndex implements SpatialIndex, MVIndex {
         }
     }
 
-    private SpatialKey getKey(SearchRow r) {
-        if (r == null) {
+    private SpatialKey getEnvelope(SearchRow row) {
+        if (row == null) {
             return null;
         }
-        Value v = r.getValue(columnIds[0]);
-        IGeometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
-        IEnvelope env = g.getEnvelope();
-        return new SpatialKey(r.getKey(),
-                (float) env.getMinX(), (float) env.getMaxX(),
-                (float) env.getMinY(), (float) env.getMaxY());
+        Value v = row.getValue(columnIds[0]);
+        return ((ValueGeometry<?>) v.convertTo(Value.GEOMETRY)).getSpatialKey(row.getKey());
     }
 
     @Override
     public void remove(Session session, Row row) {
-        SpatialKey key = getKey(row);
+        SpatialKey key = getEnvelope(row);
         TransactionMap<SpatialKey, Value> map = getMap(session);
         try {
             Value old = map.remove(key);
@@ -215,15 +209,6 @@ public class MVSpatialIndex extends BaseIndex implements SpatialIndex, MVIndex {
         TransactionMap<SpatialKey, Value> map = getMap(session);
         Iterator<SpatialKey> it = map.wrapIterator(cursor, false);
         return new MVStoreCursor(session, it);
-    }
-
-    private SpatialKey getEnvelope(SearchRow row) {
-        Value v = row.getValue(columnIds[0]);
-        IGeometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
-        IEnvelope env = g.getEnvelope();
-        return new SpatialKey(row.getKey(),
-                (float) env.getMinX(), (float) env.getMaxX(),
-                (float) env.getMinY(), (float) env.getMaxY());
     }
 
 

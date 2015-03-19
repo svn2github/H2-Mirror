@@ -8,13 +8,8 @@ package org.h2.value;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.ServiceLoader;
-import org.h2.api.GeometryParseException;
-import org.h2.api.IEnvelope;
-import org.h2.api.IGeometry;
-import org.h2.api.IGeometryFactory;
-import org.h2.message.DbException;
+
+import org.h2.mvstore.rtree.SpatialKey;
 import org.h2.util.StringUtils;
 
 /**
@@ -24,20 +19,8 @@ import org.h2.util.StringUtils;
  * @author Noel Grandin
  * @author Nicolas Fortin, Atelier SIG, IRSTV FR CNRS 24888
  */
-public class ValueGeometry extends Value {
+public abstract class ValueGeometry<T> extends Value{
 
-    /**
-     * Factory which provides a couple of methods to create a {@link IGeometry}
-     * instance.
-     */
-    private static final IGeometryFactory GEOMETRY_FACTORY;
-
-    static {
-        ServiceLoader<IGeometryFactory> geometryFactories = ServiceLoader.load(IGeometryFactory.class);
-        Iterator<IGeometryFactory> geometryFactoryIterator = geometryFactories.iterator();
-        GEOMETRY_FACTORY = geometryFactoryIterator.hasNext() ? geometryFactories.iterator().next() : null;
-    }
-    
     /**
      * As conversion from/to byte array cost a significant amount of CPU cycles,
      * byte array are kept in ValueGeometry instance.
@@ -54,7 +37,7 @@ public class ValueGeometry extends Value {
      * The value. Converted from byte array only on request as conversion 
      * from/to byte array cost a significant amount of CPU cycles.
      */
-    private IGeometry geometry;
+    private T geometry;
 
     /**
      * Create a new geometry objects.
@@ -62,62 +45,10 @@ public class ValueGeometry extends Value {
      * @param bytes the bytes (always known)
      * @param geometry the geometry object (may be null)
      */
-    private ValueGeometry(byte[] bytes, IGeometry geometry) {
+    protected ValueGeometry(byte[] bytes, T geometry) {
         this.bytes = bytes;
         this.geometry = geometry;
         this.hashCode = Arrays.hashCode(bytes);
-    }
-
-    /**
-     * Get or create a geometry value for the given geometry.
-     *
-     * @param g the geometry object
-     * @return the value
-     */
-    public static ValueGeometry get(IGeometry g) {
-        byte[] bytes = g.getBytes();
-        return (ValueGeometry) Value.cache(new ValueGeometry(bytes, g));
-    }
-
-    /**
-     * Get or create a geometry value for the given geometry.
-     *
-     * @param s the string representation of the geometry
-     * @return the value
-     */
-    public static ValueGeometry get(String s) {
-        try {
-            IGeometry g = GEOMETRY_FACTORY.toGeometry(s);
-            return get(g);
-        } catch (GeometryParseException ex) {
-            throw DbException.convert(ex);
-        }
-    }
-
-    /**
-     * Get or create a geometry value for the given geometry.
-     *
-     * @param s the string representation of the geometry
-     * @param srid the srid of the object
-     * @return the value
-     */
-    public static ValueGeometry get(String s, int srid) {
-        try {
-            IGeometry g = GEOMETRY_FACTORY.toGeometry(s, srid);
-            return get(g);
-        } catch (GeometryParseException ex) {
-            throw DbException.convert(ex);
-        }
-    }
-
-    /**
-     * Get or create a geometry value for the given geometry.
-     *
-     * @param bytes the WKB representation of the geometry
-     * @return the value
-     */
-    public static ValueGeometry get(byte[] bytes) {
-        return (ValueGeometry) Value.cache(new ValueGeometry(bytes, null));
     }
 
     /**
@@ -126,21 +57,16 @@ public class ValueGeometry extends Value {
      *
      * @return a copy of the geometry object
      */
-    public IGeometry getGeometry() {
-        return getGeometryNoCopy().clone();
-    }
+    public abstract T getGeometry();
 
-    public IGeometry getGeometryNoCopy() {
-        if (geometry == null) {
-            try {
-                geometry = GEOMETRY_FACTORY.toGeometry(bytes);
-            } catch (GeometryParseException ex) {
-                throw DbException.convert(ex);
-            }
-        }
-        return geometry;
-    }
-
+	@SuppressWarnings("unchecked")
+	public T getGeometryNoCopy() {
+		if (geometry == null) {
+			geometry = (T)getGeometryFactory().getGeometry(bytes);
+		}
+		return geometry;
+	}    
+    
     /**
      * Test if this geometry envelope intersects with the other geometry
      * envelope.
@@ -148,11 +74,7 @@ public class ValueGeometry extends Value {
      * @param r the other geometry
      * @return true if the two overlap
      */
-    public boolean intersectsBoundingBox(ValueGeometry r) {
-        // the Geometry object caches the envelope
-        return getGeometryNoCopy().getEnvelope().intersects(
-                r.getGeometryNoCopy().getEnvelope());
-    }
+    public abstract boolean intersectsBoundingBox(ValueGeometry<T> r);
 
     /**
      * Get the union.
@@ -160,12 +82,9 @@ public class ValueGeometry extends Value {
      * @param r the other geometry
      * @return the union of this geometry envelope and another geometry envelope
      */
-    public Value getEnvelopeUnion(ValueGeometry r) {
-        IEnvelope mergedEnvelope = getGeometryNoCopy().getEnvelope().getUnion(
-                r.getGeometryNoCopy().getEnvelope());
-        return get(GEOMETRY_FACTORY.toGeometry(mergedEnvelope));
-    }
+    public abstract Value getEnvelopeUnion(ValueGeometry<T> r);
 
+    
     @Override
     public int getType() {
         return Value.GEOMETRY;
@@ -177,17 +96,6 @@ public class ValueGeometry extends Value {
         // export database, it should contains all object attributes. Moreover
         // using bytes is faster than converting WKB to Geometry then to WKT.
         return "X'" + StringUtils.convertBytesToHex(getBytesNoCopy()) + "'::Geometry";
-    }
-
-    @Override
-    protected int compareSecure(Value v, CompareMode mode) {
-        IGeometry g = ((ValueGeometry) v).getGeometryNoCopy();
-        return getGeometryNoCopy().compareTo(g);
-    }
-
-    @Override
-    public String getString() {
-        return getGeometryNoCopy().getString();
     }
 
     @Override
@@ -223,19 +131,16 @@ public class ValueGeometry extends Value {
 
     @Override
     public int getDisplaySize() {
-        return getGeometryNoCopy().getString().length();
+        return getString().length();
     }
 
     @Override
     public int getMemory() {
         return getBytes().length * 20 + 24;
     }
+    
+    public abstract boolean equals(Object other);
 
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof ValueGeometry &&
-                Arrays.equals(getBytes(), ((ValueGeometry) other).getBytes());
-    }
 
     @Override
     public Value convertTo(int targetType) {
@@ -244,13 +149,6 @@ public class ValueGeometry extends Value {
         }
         return super.convertTo(targetType);
     }
-    
-    /**
-     * Returns <code>true</code> if a IGeometryFactory is available and initialized.
-     * @return
-     */
-    public static boolean isInitialized()
-    {
-    	return GEOMETRY_FACTORY!=null;
-    }
+
+	public abstract SpatialKey getSpatialKey(long id);
 }

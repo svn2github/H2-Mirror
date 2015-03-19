@@ -6,8 +6,7 @@
 package org.h2.index;
 
 import java.util.Iterator;
-import org.h2.api.IEnvelope;
-import org.h2.api.IGeometry;
+
 import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.message.DbException;
@@ -127,12 +126,11 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
     }
 
     private SpatialKey getEnvelope(SearchRow row) {
+    	if (row == null) {
+            return null;
+        }
         Value v = row.getValue(columnIds[0]);
-        IGeometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
-        IEnvelope env = g.getEnvelope();
-        return new SpatialKey(row.getKey(),
-                (float) env.getMinX(), (float) env.getMaxX(),
-                (float) env.getMinY(), (float) env.getMaxY());
+        return ((ValueGeometry<?>) v.convertTo(Value.GEOMETRY)).getSpatialKey(row.getKey());
     }
 
     @Override
