@@ -23,7 +23,7 @@ import org.h2.test.TestBase;
 import org.h2.tools.SimpleResultSet;
 import org.h2.tools.SimpleRowSource;
 import org.h2.value.DataType;
-import org.h2.value.H2ValueGeometry;
+import org.h2.value.JTSValueGeometry;
 import org.h2.value.Value;
 
 import com.vividsolutions.jts.geom.Coordinate;
@@ -594,9 +594,9 @@ public class TestSpatial extends TestBase {
      * Test serialization of Z and SRID values.
      */
     private void testWKB() {
-        H2ValueGeometry geom3d = getValueGeometryFactory().get(
+        JTSValueGeometry geom3d = getValueGeometryFactory().get(
                 "POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 6,  67 13 6))", 27572);
-        H2ValueGeometry copy = getValueGeometryFactory().get(geom3d.getBytes());
+        JTSValueGeometry copy = getValueGeometryFactory().get(geom3d.getBytes());
         assertEquals(6, copy.getGeometry().getCoordinates()[0].z);
         assertEquals(5, copy.getGeometry().getCoordinates()[1].z);
         assertEquals(4, copy.getGeometry().getCoordinates()[2].z);
@@ -917,9 +917,9 @@ public class TestSpatial extends TestBase {
     }
 
     @SuppressWarnings("unchecked")
-	private static IValueGeometryFactory<H2ValueGeometry, Geometry> getValueGeometryFactory()
+	private static IValueGeometryFactory<JTSValueGeometry, Geometry> getValueGeometryFactory()
     {
-    	return (IValueGeometryFactory<H2ValueGeometry, Geometry>)Value.getGeometryFactory();
+    	return (IValueGeometryFactory<JTSValueGeometry, Geometry>)Value.getGeometryFactory();
     }
     
 }

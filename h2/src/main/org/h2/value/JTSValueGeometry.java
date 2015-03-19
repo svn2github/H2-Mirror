@@ -9,9 +9,9 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.io.WKTWriter;
 
-public class H2ValueGeometry extends ValueGeometry<Geometry> {
+public class JTSValueGeometry extends ValueGeometry<Geometry> {
 
-	protected H2ValueGeometry(byte[] bytes, Geometry geometry) {
+	protected JTSValueGeometry(byte[] bytes, Geometry geometry) {
 		super(bytes, geometry);
 	}
 
@@ -37,12 +37,12 @@ public class H2ValueGeometry extends ValueGeometry<Geometry> {
 	@Override
 	public boolean equals(Object other) {
 		return other instanceof ValueGeometry
-				&& Arrays.equals(getBytes(), ((H2ValueGeometry) other).getBytes());
+				&& Arrays.equals(getBytes(), ((JTSValueGeometry) other).getBytes());
 	}
 	
 	@Override
     protected int compareSecure(Value v, CompareMode mode) {
-        Geometry g = ((H2ValueGeometry) v).getGeometryNoCopy();
+        Geometry g = ((JTSValueGeometry) v).getGeometryNoCopy();
         return getGeometryNoCopy().compareTo(g);
     }
 	

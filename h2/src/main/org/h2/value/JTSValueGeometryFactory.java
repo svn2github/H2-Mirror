@@ -13,7 +13,7 @@ import com.vividsolutions.jts.io.WKBReader;
 import com.vividsolutions.jts.io.WKBWriter;
 import com.vividsolutions.jts.io.WKTReader;
 
-public class ValueGeometryFactory implements IValueGeometryFactory<H2ValueGeometry, Geometry> {
+public class JTSValueGeometryFactory implements IValueGeometryFactory<JTSValueGeometry, Geometry> {
 	
 	@Override
 	public Geometry getGeometry(byte[] bytes) throws DbException {
@@ -46,14 +46,14 @@ public class ValueGeometryFactory implements IValueGeometryFactory<H2ValueGeomet
 	}
 
 	@Override
-	public H2ValueGeometry get(Geometry g) {
+	public JTSValueGeometry get(Geometry g) {
         byte[] bytes = convertToWKB(g);
-        return (H2ValueGeometry) Value.cache(new H2ValueGeometry(bytes, g));
+        return (JTSValueGeometry) Value.cache(new JTSValueGeometry(bytes, g));
     }
 	
 
     @Override
-	public H2ValueGeometry get(String s) {
+	public JTSValueGeometry get(String s) {
         try {
             Geometry g = new WKTReader().read(s);
             return get(g);
@@ -63,7 +63,7 @@ public class ValueGeometryFactory implements IValueGeometryFactory<H2ValueGeomet
     }
 
     @Override
-    public H2ValueGeometry get(String s, int srid) {
+    public JTSValueGeometry get(String s, int srid) {
         try {
             GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), srid);
             Geometry g = new WKTReader(geometryFactory).read(s);
@@ -74,12 +74,12 @@ public class ValueGeometryFactory implements IValueGeometryFactory<H2ValueGeomet
     }
 
     @Override
-	public H2ValueGeometry get(byte[] bytes) {
-        return (H2ValueGeometry) Value.cache(new H2ValueGeometry(bytes, null));
+	public JTSValueGeometry get(byte[] bytes) {
+        return (JTSValueGeometry) Value.cache(new JTSValueGeometry(bytes, null));
     }
     
 	@Override
-	public H2ValueGeometry get(Object g) {
+	public JTSValueGeometry get(Object g) {
     	if(!isGeometryTypeSupported(g))
     		throw new RuntimeException("The given object is not compatible with this ValueGeometryFactory instance!");
 		
