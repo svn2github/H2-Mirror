@@ -30,8 +30,20 @@ public class SpatialDataType implements DataType {
         this.dimensions = dimensions;
     }
 
-    @Override
+	@Override
     public int compare(Object a, Object b) {
+		if(a==b) {
+			return 0;
+		}
+		
+		if(a==null) {
+			return -1;
+		}
+		
+		if(b==null) {
+			return 1;
+		}
+		
         long la = ((SpatialKey) a).getId();
         long lb = ((SpatialKey) b).getId();
         return la < lb ? -1 : la > lb ? 1 : 0;
@@ -45,6 +57,14 @@ public class SpatialDataType implements DataType {
      * @return true if they are equal
      */
     public boolean equals(Object a, Object b) {
+    	if(a==b) {
+    		return true;
+    	}
+    	
+    	if(a==null || b==null) {
+    		return false;
+    	}
+    	
         long la = ((SpatialKey) a).getId();
         long lb = ((SpatialKey) b).getId();
         return la == lb;

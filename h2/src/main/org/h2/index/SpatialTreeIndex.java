@@ -23,6 +23,7 @@ import org.h2.table.Table;
 import org.h2.table.TableFilter;
 import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
+import org.h2.value.ValueNull;
 
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
@@ -129,7 +130,16 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
     }
 
     private SpatialKey getEnvelope(SearchRow row) {
-        Value v = row.getValue(columnIds[0]);
+    	 if (row == null) {
+             return null;
+         }
+         
+         Value v = row.getValue(columnIds[0]);
+         
+         if(v instanceof ValueNull) {
+         	return null;
+         }
+    	
         Geometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
         Envelope env = g.getEnvelopeInternal();
         return new SpatialKey(row.getKey(),
