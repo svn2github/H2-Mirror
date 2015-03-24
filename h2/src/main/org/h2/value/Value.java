@@ -18,8 +18,8 @@ import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+
 import org.h2.api.ErrorCode;
-import org.h2.api.IGeometry;
 import org.h2.engine.Constants;
 import org.h2.engine.SysProperties;
 import org.h2.message.DbException;
@@ -818,8 +818,8 @@ public abstract class Value {
                     return ValueGeometry.get(getBytesNoCopy());
                 case JAVA_OBJECT:
                     Object object = JdbcUtils.deserialize(getBytesNoCopy(), getDataHandler());
-                    if (object instanceof IGeometry) {
-                        return ValueGeometry.get((IGeometry) object);
+                    if (DataType.isGeometry(object)) {
+                        return ValueGeometry.getFromGeometry(object);
                     }
                 }
             }
