@@ -89,6 +89,7 @@ public class TestSpatial extends TestBase {
         testScanIndexOnNonSpatialQuery();
         testStoreCorruption();
         testExplainSpatialIndexWithPk();
+        testNullableGeometry();
     }
 
     private void testHashCode() {
@@ -907,6 +908,24 @@ public class TestSpatial extends TestBase {
             // Close the database
             conn.close();
         }
+        deleteDb("spatial");
+    }
+    
+    private void testNullableGeometry() throws SQLException {
+    	deleteDb("spatial");
+        Connection conn = getConnection(url);
+        Statement stat = conn.createStatement();
+
+        stat.execute("create memory table test" +
+                "(id int primary key, the_geom geometry)");
+        stat.execute("create spatial index on test(the_geom)");
+        stat.execute("insert into test values(1, null)");
+        ResultSet rs = stat.executeQuery("select * from test");
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+        assertNull(rs.getObject(2));
+        stat.execute("drop table test");
+        conn.close();
         deleteDb("spatial");
     }
 
