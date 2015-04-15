@@ -85,6 +85,14 @@ public class JTSValueGeometryFactory implements IValueGeometryFactory<JTSValueGe
 		
     	return get((Geometry)g);
 	}
+	
+	@Override
+	public JTSValueGeometry get(Value g) {
+		if(!(g instanceof JTSValueGeometry))
+			throw new RuntimeException("The given value is not compatible with this ValueGeometryFactory instance!");
+		
+		return (JTSValueGeometry) g;
+	}
 
 	@Override
 	public boolean isGeometryTypeSupported(Object g) {

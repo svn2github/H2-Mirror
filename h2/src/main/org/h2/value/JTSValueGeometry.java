@@ -21,13 +21,13 @@ public class JTSValueGeometry extends ValueGeometry<Geometry> {
 	}
 
 	@Override
-	public boolean intersectsBoundingBox(ValueGeometry<Geometry> r) {
+	public boolean _intersectsBoundingBox(ValueGeometry<Geometry> r) {
 		// the Geometry object caches the envelope
 		return getGeometryNoCopy().getEnvelopeInternal().intersects(
 				r.getGeometryNoCopy().getEnvelopeInternal());
 	}
 
-	public Value getEnvelopeUnion(ValueGeometry<Geometry> r) {
+	public Value _getEnvelopeUnion(ValueGeometry<Geometry> r) {
 		GeometryFactory gf = new GeometryFactory();
 		Envelope mergedEnvelope = new Envelope(getGeometryNoCopy().getEnvelopeInternal());
 		mergedEnvelope.expandToInclude(r.getGeometryNoCopy().getEnvelopeInternal());

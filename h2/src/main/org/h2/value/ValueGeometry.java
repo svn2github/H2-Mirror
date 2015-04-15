@@ -74,16 +74,49 @@ public abstract class ValueGeometry<T> extends Value{
      * @param r the other geometry
      * @return true if the two overlap
      */
-    public abstract boolean intersectsBoundingBox(ValueGeometry<T> r);
+	protected abstract boolean _intersectsBoundingBox(ValueGeometry<T> r);
 
+	 /**
+     * Test if this geometry envelope intersects with the other geometry
+     * envelope.
+     *
+     * @param r the other geometry
+     * @return true if the two overlap
+     */
+	@SuppressWarnings("unchecked")
+	public final boolean intersectsBoundingBox(ValueGeometry<?> r)
+	{
+		if(!getClass().isInstance(r)){
+			return false; // not supported and should never happen
+		}
+		
+		return _intersectsBoundingBox((ValueGeometry<T>) r);
+	}
+	
     /**
      * Get the union.
      *
      * @param r the other geometry
      * @return the union of this geometry envelope and another geometry envelope
      */
-    public abstract Value getEnvelopeUnion(ValueGeometry<T> r);
-
+    protected abstract Value _getEnvelopeUnion(ValueGeometry<T> r);
+    
+    /**
+     * Get the union.
+     *
+     * @param r the other geometry
+     * @return the union of this geometry envelope and another geometry envelope
+     */
+    @SuppressWarnings("unchecked")
+	public final Value getEnvelopeUnion(ValueGeometry<?> r)
+    {
+    	if(!getClass().isInstance(r)){
+			return ValueNull.INSTANCE; // not supported and should never happen
+		}
+    	
+    	return _getEnvelopeUnion((ValueGeometry<T>) r);
+    }
+    
     
     @Override
     public int getType() {

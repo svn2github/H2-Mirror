@@ -1,6 +1,7 @@
 package org.h2.api;
 
 import org.h2.message.DbException;
+import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
 
 import com.vividsolutions.jts.geom.Geometry;
@@ -18,6 +19,8 @@ public interface IValueGeometryFactory<T extends ValueGeometry<S>, S> {
 	
 	public T get(byte[] g);
 	
+	public T get(Value g);
+	
 	public Class<S> getGeometryType();
 	
 	public boolean isGeometryTypeSupported(Object g);
@@ -33,7 +36,6 @@ public interface IValueGeometryFactory<T extends ValueGeometry<S>, S> {
      * @throws GeometryParseException if a parsing problem occurs
      */
 	public S getGeometry(String s) throws DbException;
-	
 
     /**
      * Get or create a geometry value for the given geometry.

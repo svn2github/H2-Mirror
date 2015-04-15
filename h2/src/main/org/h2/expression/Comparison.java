@@ -293,9 +293,7 @@ public class Comparison extends Condition {
             result = database.compare(l, r) < 0;
             break;
         case SPATIAL_INTERSECTS: {
-            ValueGeometry lg = (ValueGeometry) l.convertTo(Value.GEOMETRY);
-            ValueGeometry rg = (ValueGeometry) r.convertTo(Value.GEOMETRY);
-            result = lg.intersectsBoundingBox(rg);
+            result = Value.getGeometryFactory().get(l).intersectsBoundingBox(Value.getGeometryFactory().get(r));
             break;
         }
         default:
