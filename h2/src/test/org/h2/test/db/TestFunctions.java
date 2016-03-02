@@ -1628,7 +1628,7 @@ public class TestFunctions extends TestBase implements AggregateFunction {
         assertResult("abc", stat, "SELECT TO_CHAR('abc') FROM DUAL");
         conn.close();
     }
-    
+
 
     private void testGenerateSeries() throws SQLException {
         Connection conn = getConnection("functions");
@@ -1652,7 +1652,7 @@ public class TestFunctions extends TestBase implements AggregateFunction {
         rs = stat.executeQuery("select * from system_range(1,2,-1)");
         assertFalse(rs.next());
 
-        assertThrows(ErrorCode.STEP_SIZE_SHOUD_NOT_BE_ZERO, stat).executeQuery(
+        assertThrows(ErrorCode.STEP_SIZE_MUST_NOT_BE_ZERO, stat).executeQuery(
                 "select * from system_range(1,2,0)");
 
         rs = stat.executeQuery("select * from system_range(2,1,-1)");

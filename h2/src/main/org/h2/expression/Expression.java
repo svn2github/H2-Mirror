@@ -264,10 +264,10 @@ public abstract class Expression {
 
     /**
      * Allows to check if the related expression is under conjunctive format.
-     * 
+     *
      * @return if the related expression has the logic operator OR.
      */
-    public boolean isDisjunctive(){
+    public boolean isDisjunctive() {
         return false;
     }
 
