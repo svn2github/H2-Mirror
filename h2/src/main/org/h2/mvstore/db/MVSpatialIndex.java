@@ -7,6 +7,7 @@ package org.h2.mvstore.db;
 
 import java.util.Iterator;
 import java.util.List;
+
 import org.h2.api.ErrorCode;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
@@ -97,7 +98,9 @@ public class MVSpatialIndex extends BaseIndex implements SpatialIndex, MVIndex {
                 new MVRTreeMap.Builder<VersionedValue>().
                 valueType(valueType);
         spatialMap = db.getMvStore().getStore().openMap(mapName, mapBuilder);
-        dataMap = mvTable.getTransaction(null).openMap(spatialMap);
+        Transaction t = mvTable.getTransaction(null);
+        dataMap = t.openMap(spatialMap);
+        t.commit();
     }
 
     @Override

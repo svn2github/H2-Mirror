@@ -805,6 +805,13 @@ public class ErrorCode {
     public static final int VIEW_ALREADY_EXISTS_1 = 90038;
 
     /**
+     * The error with code <code>90039</code> is thrown when
+     * trying to access a CLOB or BLOB object that timed out.
+     * See the database setting LOB_TIMEOUT.
+     */
+    public static final int LOB_CLOSED_ON_TIMEOUT_1 = 90039;
+
+    /**
      * The error with code <code>90040</code> is thrown when
      * a user that is not administrator tries to execute a statement
      * that requires admin privileges.
@@ -1904,10 +1911,10 @@ public class ErrorCode {
      * The error with code <code>90142</code> is thrown when
      * trying to set zero for step size.
      */
-    public static final int STEP_SIZE_SHOUD_NOT_BE_ZERO = 90142;
+    public static final int STEP_SIZE_MUST_NOT_BE_ZERO = 90142;
 
 
-    // next are 90039, 90051, 90056, 90110, 90122, 90143
+    // next are 90051, 90056, 90110, 90122, 90143
 
     private ErrorCode() {
         // utility class
