@@ -23,7 +23,6 @@ import org.h2.expression.Expression;
 import org.h2.expression.ExpressionColumn;
 import org.h2.expression.ExpressionVisitor;
 import org.h2.expression.Parameter;
-import org.h2.expression.Wildcard;
 import org.h2.index.Cursor;
 import org.h2.index.Index;
 import org.h2.index.IndexCondition;
@@ -34,7 +33,7 @@ import org.h2.result.ResultInterface;
 import org.h2.result.ResultTarget;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
-import org.h2.result.SortOrder; 
+import org.h2.result.SortOrder;
 import org.h2.table.Column;
 import org.h2.table.ColumnResolver;
 import org.h2.table.IndexColumn;
@@ -480,20 +479,19 @@ public class Select extends Query {
     /**
      * Validates the cases where ORDER BY clause do not contains all indexed
      * columns, but the related index path still would be valid for such search.
-     * Sometimes, the absence of a column in the ORDER BY clause does not alter the
-     * expected final result, and an index sorted scan could still be used.
+     * Sometimes, the absence of a column in the ORDER BY clause does not alter
+     * the expected final result, and an index sorted scan could still be used.
      * <pre>
      * CREATE TABLE test(a, b);
      * CREATE UNIQUE INDEX idx_test ON test(a, b);
      * SELECT b FROM test WHERE a=22 AND b>10 order by b;
      * </pre>
-     * More restrictive rule where one table query with indexed column
-     * not present in the ORDER BY clause is filtered with equality conditions
-     * (at least one) of type COLUMN = CONSTANT in a conjunctive fashion.
-     * 
+     * More restrictive rule where one table query with indexed column not
+     * present in the ORDER BY clause is filtered with equality conditions (at
+     * least one) of type COLUMN = CONSTANT in a conjunctive fashion.
+     *
      * @param sortColumn Column to be validated
-     * @return true if the column can be used implicitly, or false
-     *         otherwise.
+     * @return true if the column can be used implicitly, or false otherwise.
      */
     private boolean isSortColumnImplicit(TableFilter tableFilter,
             Column sortColumn) {
@@ -724,14 +722,11 @@ public class Select extends Query {
             String schemaName = expr.getSchemaName();
             String tableAlias = expr.getTableAlias();
             if (tableAlias == null) {
-                int temp = i;
                 expressions.remove(i);
                 for (TableFilter filter : filters) {
-                    Wildcard c2 = new Wildcard(filter.getTable().getSchema()
-                            .getName(), filter.getTableAlias());
-                    expressions.add(i++, c2);
+                    i = expandColumnList(filter, i);
                 }
-                i = temp - 1;
+                i--;
             } else {
                 TableFilter filter = null;
                 for (TableFilter f : filters) {
@@ -748,21 +743,26 @@ public class Select extends Query {
                     throw DbException.get(ErrorCode.TABLE_OR_VIEW_NOT_FOUND_1,
                             tableAlias);
                 }
-                Table t = filter.getTable();
-                String alias = filter.getTableAlias();
                 expressions.remove(i);
-                Column[] columns = t.getColumns();
-                for (Column c : columns) {
-                    if (filter.isNaturalJoinColumn(c)) {
-                        continue;
-                    }
-                    ExpressionColumn ec = new ExpressionColumn(
-                            session.getDatabase(), null, alias, c.getName());
-                    expressions.add(i++, ec);
-                }
+                i = expandColumnList(filter, i);
                 i--;
             }
         }
+    }
+
+    private int expandColumnList(TableFilter filter, int index) {
+        Table t = filter.getTable();
+        String alias = filter.getTableAlias();
+        Column[] columns = t.getColumns();
+        for (Column c : columns) {
+            if (filter.isNaturalJoinColumn(c)) {
+                continue;
+            }
+            ExpressionColumn ec = new ExpressionColumn(
+                    session.getDatabase(), null, alias, c.getName());
+            expressions.add(index++, ec);
+        }
+        return index;
     }
 
     @Override

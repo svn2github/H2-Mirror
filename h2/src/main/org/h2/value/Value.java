@@ -834,8 +834,8 @@ public abstract class Value {
                     return GEOMETRY_FACTORY.get(getBytesNoCopy());
                 case JAVA_OBJECT:
                     Object object = JdbcUtils.deserialize(getBytesNoCopy(), getDataHandler());
-                    if (GEOMETRY_FACTORY.isGeometryTypeSupported(object)) {
-                        return GEOMETRY_FACTORY.get(object);
+                    if (object instanceof IGeometry) {
+                        return ValueGeometry.get((IGeometry) object);
                     }
                 }
             }
