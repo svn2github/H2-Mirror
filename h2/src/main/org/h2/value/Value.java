@@ -22,7 +22,7 @@ import java.util.Iterator;
 import java.util.ServiceLoader;
 
 import org.h2.api.ErrorCode;
-import org.h2.api.ISpatialDriver;
+import org.h2.api.SpatialDriver;
 import org.h2.api.ValueGeometryFactory;
 import org.h2.engine.Constants;
 import org.h2.engine.SysProperties;
@@ -183,8 +183,8 @@ public abstract class Value {
     private static final ValueGeometryFactory<? extends ValueGeometry<?>,?> GEOMETRY_FACTORY;
 
     static {
-		ServiceLoader<ISpatialDriver> geometryFactories = ServiceLoader.load(ISpatialDriver.class);
-		Iterator<ISpatialDriver> geometryFactoryIterator = geometryFactories.iterator();
+		ServiceLoader<SpatialDriver> geometryFactories = ServiceLoader.load(SpatialDriver.class);
+		Iterator<SpatialDriver> geometryFactoryIterator = geometryFactories.iterator();
         GEOMETRY_FACTORY = (geometryFactoryIterator.hasNext() ? geometryFactories.iterator().next().createGeometryFactory() : null);
     }
 
