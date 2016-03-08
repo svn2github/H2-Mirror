@@ -7,6 +7,7 @@ package org.h2.index;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+
 import org.h2.engine.Session;
 import org.h2.expression.Comparison;
 import org.h2.message.DbException;
@@ -19,7 +20,6 @@ import org.h2.table.IndexColumn;
 import org.h2.table.Table;
 import org.h2.table.TableFilter;
 import org.h2.value.Value;
-import org.h2.value.ValueGeometry;
 import org.h2.value.ValueNull;
 
 /**
@@ -185,10 +185,9 @@ public class IndexCursor implements Cursor {
             // if an object needs to overlap with both a and b,
             // then it needs to overlap with the the union of a and b
             // (not the intersection)
-            ValueGeometry vg = (ValueGeometry) row.getValue(columnId).
-                    convertTo(Value.GEOMETRY);
-            v = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).
-                    getEnvelopeUnion(vg);
+
+        	v= Value.getGeometryFactory().get(v).getEnvelopeUnion(
+        			Value.getGeometryFactory().get(row.getValue(columnId)));
         }
         if (columnId < 0) {
             row.setKey(v.getLong());

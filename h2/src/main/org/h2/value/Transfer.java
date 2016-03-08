@@ -693,9 +693,9 @@ public class Transfer {
         }
         case Value.GEOMETRY:
             if (version >= Constants.TCP_PROTOCOL_VERSION_14) {
-                return ValueGeometry.get(readBytes());
+                return Value.getGeometryFactory().get(readBytes());
             }
-            return ValueGeometry.get(readString());
+            return Value.getGeometryFactory().get(readString());
         default:
             throw DbException.get(ErrorCode.CONNECTION_BROKEN_1, "type=" + type);
         }

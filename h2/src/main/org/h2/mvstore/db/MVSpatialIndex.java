@@ -32,10 +32,6 @@ import org.h2.table.TableFilter;
 import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
 import org.h2.value.ValueLong;
-import org.h2.value.ValueNull;
-
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Geometry;
 
 /**
  * This is an index based on a MVRTreeMap.
@@ -125,7 +121,7 @@ public class MVSpatialIndex extends BaseIndex implements SpatialIndex, MVIndex {
     @Override
     public void add(Session session, Row row) {
         TransactionMap<SpatialKey, Value> map = getMap(session);
-        SpatialKey key = getKey(row);
+        SpatialKey key = getEnvelope(row);
         if (indexType.isUnique()) {
             // this will detect committed entries only
             RTreeCursor cursor = spatialMap.findContainedKeys(key);
@@ -164,9 +160,17 @@ public class MVSpatialIndex extends BaseIndex implements SpatialIndex, MVIndex {
         }
     }
 
+    private SpatialKey getEnvelope(SearchRow row) {
+        if (row == null) {
+            return null;
+        }
+        Value v = row.getValue(columnIds[0]);
+        return ((ValueGeometry<?>) v.convertTo(Value.GEOMETRY)).getSpatialKey(row.getKey());
+    }
+
     @Override
     public void remove(Session session, Row row) {
-        SpatialKey key = getKey(row);
+        SpatialKey key = getEnvelope(row);
         TransactionMap<SpatialKey, Value> map = getMap(session);
         try {
             Value old = map.remove(key);
@@ -204,26 +208,12 @@ public class MVSpatialIndex extends BaseIndex implements SpatialIndex, MVIndex {
             return find(session);
         }
         Iterator<SpatialKey> cursor =
-                spatialMap.findIntersectingKeys(getKey(intersection));
+                spatialMap.findIntersectingKeys(getEnvelope(intersection));
         TransactionMap<SpatialKey, Value> map = getMap(session);
         Iterator<SpatialKey> it = map.wrapIterator(cursor, false);
         return new MVStoreCursor(session, it);
     }
 
-    private SpatialKey getKey(SearchRow row) {
-        if (row == null) {
-            return null;
-        }
-        Value v = row.getValue(columnIds[0]);
-        if (v == ValueNull.INSTANCE) {
-            return null;
-        }
-        Geometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
-        Envelope env = g.getEnvelopeInternal();
-        return new SpatialKey(row.getKey(),
-                (float) env.getMinX(), (float) env.getMaxX(),
-                (float) env.getMinY(), (float) env.getMaxY());
-    }
 
     /**
      * Get the row with the given index key.

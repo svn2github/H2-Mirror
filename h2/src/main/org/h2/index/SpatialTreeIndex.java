@@ -23,10 +23,6 @@ import org.h2.table.Table;
 import org.h2.table.TableFilter;
 import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
-import org.h2.value.ValueNull;
-
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Geometry;
 
 /**
  * This is an index based on a MVR-TreeMap.
@@ -126,22 +122,15 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        treeMap.add(getKey(row), row.getKey());
+        treeMap.add(getEnvelope(row), row.getKey());
     }
 
-    private SpatialKey getKey(SearchRow row) {
-        if (row == null) {
+    private SpatialKey getEnvelope(SearchRow row) {
+    	if (row == null) {
             return null;
         }
         Value v = row.getValue(columnIds[0]);
-        if (v == ValueNull.INSTANCE) {
-            return null;
-        }
-        Geometry g = ((ValueGeometry) v.convertTo(Value.GEOMETRY)).getGeometryNoCopy();
-        Envelope env = g.getEnvelopeInternal();
-        return new SpatialKey(row.getKey(),
-                (float) env.getMinX(), (float) env.getMaxX(),
-                (float) env.getMinY(), (float) env.getMaxY());
+        return ((ValueGeometry<?>) v.convertTo(Value.GEOMETRY)).getSpatialKey(row.getKey());
     }
 
     @Override
@@ -149,7 +138,7 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        if (!treeMap.remove(getKey(row), row.getKey())) {
+        if (!treeMap.remove(getEnvelope(row), row.getKey())) {
             throw DbException.throwInternalError("row not found");
         }
     }
@@ -174,7 +163,7 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
             return find(filter.getSession());
         }
         return new SpatialCursor(
-                treeMap.findIntersectingKeys(getKey(intersection)), table,
+                treeMap.findIntersectingKeys(getEnvelope(intersection)), table,
                 filter.getSession());
     }
 
