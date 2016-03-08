@@ -18,6 +18,7 @@ import org.h2.util.StringUtils;
  * @author Thomas Mueller
  * @author Noel Grandin
  * @author Nicolas Fortin, Atelier SIG, IRSTV FR CNRS 24888
+ * @param <T> the type of the used framework geometry
  */
 public abstract class ValueGeometry<T> extends Value{
 
@@ -59,6 +60,10 @@ public abstract class ValueGeometry<T> extends Value{
      */
     public abstract T getGeometry();
 
+	/**
+	 * Returns the internal geometry instance which should be immutable.
+	 * @return the internal geometry instance which should be immutable
+	 */
 	@SuppressWarnings("unchecked")
 	public T getGeometryNoCopy() {
 		if (geometry == null) {
@@ -172,7 +177,8 @@ public abstract class ValueGeometry<T> extends Value{
         return getBytes().length * 20 + 24;
     }
     
-    public abstract boolean equals(Object other);
+    @Override
+	public abstract boolean equals(Object other);
 
 
     @Override
@@ -183,5 +189,10 @@ public abstract class ValueGeometry<T> extends Value{
         return super.convertTo(targetType);
     }
 
+    /**
+     * Returns the {@link SpatialKey} for the given row key. 
+     * @param id the row key
+     * @return the {@link SpatialKey} for the given row key
+     */
 	public abstract SpatialKey getSpatialKey(long id);
 }

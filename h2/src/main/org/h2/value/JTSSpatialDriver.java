@@ -1,13 +1,13 @@
 package org.h2.value;
 
 import org.h2.api.ISpatialDriver;
-import org.h2.api.IValueGeometryFactory;
+import org.h2.api.ValueGeometryFactory;
 
 
 public class JTSSpatialDriver implements ISpatialDriver{
 
 	@Override
-	public IValueGeometryFactory<?, ?> createGeometryFactory() {
+	public ValueGeometryFactory<?, ?> createGeometryFactory() {
 		return new JTSValueGeometryFactory();
 	}
 }

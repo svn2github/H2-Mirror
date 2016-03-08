@@ -23,7 +23,7 @@ import java.util.ServiceLoader;
 
 import org.h2.api.ErrorCode;
 import org.h2.api.ISpatialDriver;
-import org.h2.api.IValueGeometryFactory;
+import org.h2.api.ValueGeometryFactory;
 import org.h2.engine.Constants;
 import org.h2.engine.SysProperties;
 import org.h2.message.DbException;
@@ -180,7 +180,7 @@ public abstract class Value {
      * Factory which provides a couple of methods to create a {@link IGeometry}
      * instance.
      */
-    private static final IValueGeometryFactory<? extends ValueGeometry<?>,?> GEOMETRY_FACTORY;
+    private static final ValueGeometryFactory<? extends ValueGeometry<?>,?> GEOMETRY_FACTORY;
 
     static {
 		ServiceLoader<ISpatialDriver> geometryFactories = ServiceLoader.load(ISpatialDriver.class);
@@ -834,8 +834,8 @@ public abstract class Value {
                     return GEOMETRY_FACTORY.get(getBytesNoCopy());
                 case JAVA_OBJECT:
                     Object object = JdbcUtils.deserialize(getBytesNoCopy(), getDataHandler());
-                    if (object instanceof IGeometry) {
-                        return ValueGeometry.get((IGeometry) object);
+                    if (GEOMETRY_FACTORY.isGeometryTypeSupported(object)) {
+                        return GEOMETRY_FACTORY.get(object);
                     }
                 }
             }
@@ -1193,7 +1193,7 @@ public abstract class Value {
     	return GEOMETRY_FACTORY!=null;
     }
     
-    public static IValueGeometryFactory<? extends ValueGeometry<?>, ?> getGeometryFactory()
+    public static ValueGeometryFactory<? extends ValueGeometry<?>, ?> getGeometryFactory()
     {
     	return GEOMETRY_FACTORY;
     }

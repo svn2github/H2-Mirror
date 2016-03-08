@@ -1,6 +1,11 @@
+/*
+ * Copyright 2004-2014 H2 Group. Multiple-Licensed under the MPL 2.0,
+ * and the EPL 1.0 (http://h2database.com/html/license.html).
+ * Initial Developer: H2 Group
+ */
 package org.h2.value;
 
-import org.h2.api.IValueGeometryFactory;
+import org.h2.api.ValueGeometryFactory;
 import org.h2.message.DbException;
 
 import com.vividsolutions.jts.geom.CoordinateSequence;
@@ -13,7 +18,13 @@ import com.vividsolutions.jts.io.WKBReader;
 import com.vividsolutions.jts.io.WKBWriter;
 import com.vividsolutions.jts.io.WKTReader;
 
-public class JTSValueGeometryFactory implements IValueGeometryFactory<JTSValueGeometry, Geometry> {
+/**
+ * The {@link ValueGeometryFactory} implementation for the JTS geometry
+ * framework.
+ * 
+ * @author Steve Hruda
+ */
+public class JTSValueGeometryFactory implements ValueGeometryFactory<JTSValueGeometry, Geometry> {
 	
 	@Override
 	public Geometry getGeometry(byte[] bytes) throws DbException {

@@ -13,26 +13,24 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.Random;
 
-import com.vividsolutions.jts.geom.Envelope;
-import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.geom.util.AffineTransformation;
-
 import org.h2.api.Aggregate;
-import org.h2.api.IValueGeometryFactory;
 import org.h2.test.TestBase;
 import org.h2.tools.SimpleResultSet;
 import org.h2.tools.SimpleRowSource;
 import org.h2.value.DataType;
-import org.h2.value.JTSValueGeometry;
+import org.h2.value.JTSValueGeometryFactory;
 import org.h2.value.Value;
+import org.h2.value.ValueGeometry;
+
 import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
+import com.vividsolutions.jts.geom.util.AffineTransformation;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
-
-import org.h2.value.ValueGeometry;
 
 /**
  * Spatial datatype and index tests.
@@ -594,15 +592,16 @@ public class TestSpatial extends TestBase {
      * Test serialization of Z and SRID values.
      */
     private void testWKB() {
-        JTSValueGeometry geom3d = getValueGeometryFactory().get(
-                "POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 6,  67 13 6))", 27572);
-        JTSValueGeometry copy = getValueGeometryFactory().get(geom3d.getBytes());
-        assertEquals(6, copy.getGeometry().getCoordinates()[0].z);
-        assertEquals(5, copy.getGeometry().getCoordinates()[1].z);
-        assertEquals(4, copy.getGeometry().getCoordinates()[2].z);
-        // Test SRID
-        copy = getValueGeometryFactory().get(geom3d.getBytes());
-        assertEquals(27572, copy.getGeometry().getSRID());
+    	JTSValueGeometryFactory geometryFactory = new JTSValueGeometryFactory();
+		ValueGeometry<Geometry> geom3d = geometryFactory.get(
+				"POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 6,  67 13 6))", 27572);
+		ValueGeometry<Geometry> copy = geometryFactory.get(geom3d.getBytes());
+		assertEquals(6, copy.getGeometry().getCoordinates()[0].z);
+		assertEquals(5, copy.getGeometry().getCoordinates()[1].z);
+		assertEquals(4, copy.getGeometry().getCoordinates()[2].z);
+		// Test SRID
+		copy = geometryFactory.get(geom3d.getBytes());
+		assertEquals(27572, copy.getGeometry().getSRID());
     }
 
     /**
